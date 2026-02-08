@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema({
     // username
@@ -27,8 +28,24 @@ const userSchema = new mongoose.Schema({
         minlength: 8,
         required: [true, 'Password required'],
         match: [/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/, "Password must be at least 8 characters long and contain at least one letter and one number"]
+    },
+// set timestamp for createdAt and updatedAt fields for user profile UI
+}, { timestamps: true });
+
+// BCRYPT
+// hash passwords for local auth users, pre-save middleware
+userSchema.pre('save', async function() {
+    // hash the password if it's a new user or if password has been modified
+    if (this.isNew || this.isModified('password')) {
+        const saltRounds = 10;
+        this.password = await bcrypt.hash(this.password, saltRounds);
     }
 });
+
+// compare incoming password with hashed password for login
+userSchema.methods.isCorrectPassword = async function (password) {
+    return bcrypt.compare(password, this.password);
+};
 
 const User = mongoose.model('User', userSchema);
 
