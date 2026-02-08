@@ -6,6 +6,14 @@ const app = express();
 // DATABASE CONNECTION
 const db = require("./config/connection.js");
 
+// MIDDLEWARE
+// parse JSON data
+app.use(express.json());
+
+// ROUTES - pass all requests to this central routing hub
+const router = require("./routes/index.js");
+app.use(router);
+
 // LISTENER PORT
 // fallback for port
 const PORT = process.env.PORT || 4001;
