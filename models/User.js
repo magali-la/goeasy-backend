@@ -26,17 +26,34 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         minlength: 8,
-        required: [true, 'Password required'],
-        match: [/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/, "Password must be at least 8 characters long and contain at least one letter and one number"]
+        match: [/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/, "Password must be at least 8 characters long and contain at least one letter and one number"],
+        // Google OAuth won't have password so validate this with the googleId if provided or just the password for local auth
+        validate: {
+            validator: function (password) {
+                return this.googleId || password;
+            }
+        }
     },
+    // add fields for OAuth
+    googleId: {
+        type: String,
+        unique: true,
+        // sparse to only look for users in collection that have this field in its document if searching for the google user
+        sparse: true
+    },
+    provider: {
+        type: String,
+        enum: ["local", "google"],
+        default: "local"
+    }
 // set timestamp for createdAt and updatedAt fields for user profile UI
 }, { timestamps: true });
 
 // BCRYPT
 // hash passwords for local auth users, pre-save middleware
 userSchema.pre('save', async function() {
-    // hash the password if it's a new user or if password has been modified
-    if (this.isNew || this.isModified('password')) {
+    // hash the password if it's a new user or if password has been modified - check if there's a password first
+    if (this.password && (this.isNew || this.isModified('password'))) {
         const saltRounds = 10;
         this.password = await bcrypt.hash(this.password, saltRounds);
     }
