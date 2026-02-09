@@ -8,11 +8,12 @@ const userSchema = new mongoose.Schema({
         required: [true, "Username is required"],
         unique: true,
         trim: true,
-        minlength: 6,
+        // set to 1 in case emails from OAuth users are short, in frontend set min to 6
+        minlength: 1,
         // set to 30 in case google email is long, cap at 15 in frontend for local signups
         maxlength: 30,
         // pattern match
-        match: [/^[a-zA-Z0-9_-]+$/, 'Username must contain letters, number, dash -, or underscore _']
+        match: [/^[a-zA-Z0-9._-]+$/, 'Username must contain letters, number, period ., dash -, or underscore _']
     },
     // email
     email: {
