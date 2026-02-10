@@ -79,4 +79,28 @@ router.get("/me", authMiddleware, async (req, res) => {
     }
 });
 
+// DELETE - delete account /api/users/me
+router.delete("/me", authMiddleware, async (req, res) => {
+    // auth middleware will return the req.user and run this route if the token is valid, find the user and delete them
+    try {
+        // store the user while deleting to use the provider field for conditional response - req.user only has user, email, id from middleware
+        const user = await User.findByIdAndDelete(req.user._id);
+
+        // extra check that a user exists in case the token is still active and passes middleware checks
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        // additional info for google users
+        if (user.provider === "google") {
+            return res.status(200).json({ message: "Account deleted successfully. If you signed up with Google, remember to revoke access in your Google Account settings." })
+        }
+
+        // normal return for
+        return res.status(200).json({ message: "Account deleted successfully." });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;
