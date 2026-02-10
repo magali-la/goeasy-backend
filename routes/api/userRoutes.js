@@ -2,7 +2,7 @@ const router = require("express").Router();
 const User = require("../../models/User.js");
 
 // use the signToken utility to assign a token to the user on signup and login
-const { signToken } = require("../../utils/auth.js");
+const { authMiddleware, signToken } = require("../../utils/auth.js");
 
 // ROUTES 
 // CREATE new user - POST /api/user/register
@@ -60,6 +60,23 @@ router.post("/login", async (req, res) => {
 
     } catch (error) {
         // if the bad request errors above aren't caught, then it's a server error
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// INDEX - get profile - GET /api/users/me
+router.get("/me", authMiddleware, async (req, res) => {
+    // authMiddleware is going to attach a req.user if the token is valid and then run this route to return the profile
+    try {
+        // if the token is valid, return the user
+        const user = await User.findById(req.user._id).select("-password");
+
+        const userObj = user.toObject();
+        // remove the googleid if its an oauth user
+        if (userObj.googleId) delete userObj.googleId;
+
+        res.json(userObj);
+    } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
