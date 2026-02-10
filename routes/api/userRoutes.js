@@ -1,5 +1,7 @@
 const router = require("express").Router();
 const User = require("../../models/User.js");
+// sanitize user utility
+const { sanitizeUser } = require("../../utils/sanitizeUser.js");
 
 // use the signToken utility to assign a token to the user on signup and login
 const { authMiddleware, signToken } = require("../../utils/auth.js");
@@ -15,8 +17,7 @@ router.post("/register", async (req, res) => {
         const token = signToken(user);
 
         // remove password from the response - convert the Mongoose document with metadata into an object
-        const userObj = user.toObject();
-        delete userObj.password;
+        const userObj = sanitizeUser(user);
 
         // success response w token and user
         res.status(201).json({ token, user: userObj });
@@ -34,7 +35,8 @@ router.post("/login", async (req, res) => {
             return res.status(400).json({ message: "Email and password are required." });
         }
 
-        const user = await User.findOne({ email: req.body.email });
+        // since defult behavior removes password from query, select it for bcrypt comparison to work
+        const user = await User.findOne({ email: req.body.email }).select("+password");
 
         // user not found by email
         if (!user) {
@@ -51,9 +53,8 @@ router.post("/login", async (req, res) => {
         // assign token to user
         const token = signToken(user);
 
-        // convert mongoose document to js object and remove password from response
-        const userObj = user.toObject();
-        delete userObj.password;
+        // sanitize user utility - remove sensitive data
+        const userObj = sanitizeUser(user);
 
         // response with user
         res.json({ token, user: userObj });
@@ -68,14 +69,11 @@ router.post("/login", async (req, res) => {
 router.get("/me", authMiddleware, async (req, res) => {
     // authMiddleware is going to attach a req.user if the token is valid and then run this route to return the profile
     try {
-        // if the token is valid, return the user
-        const user = await User.findById(req.user._id).select("-password");
+        // find the user - it will never query with password or google id bc of schema select: false for both fields
+        const user = await User.findById(req.user._id);
 
-        const userObj = user.toObject();
-        // remove the googleid if its an oauth user
-        if (userObj.googleId) delete userObj.googleId;
-
-        res.json(userObj);
+        // user without pass/googleid
+        res.json(user);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

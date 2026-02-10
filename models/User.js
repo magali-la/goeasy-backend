@@ -33,14 +33,18 @@ const userSchema = new mongoose.Schema({
             validator: function (password) {
                 return this.googleId || password;
             }
-        }
+        },
+        // never pull password from the db
+        select: false
     },
     // add fields for OAuth
     googleId: {
         type: String,
         unique: true,
         // sparse to only look for users in collection that have this field in its document if searching for the google user
-        sparse: true
+        sparse: true,
+        // never pull googleID from the db
+        select: false
     },
     provider: {
         type: String,
