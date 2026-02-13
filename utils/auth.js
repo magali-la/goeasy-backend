@@ -6,7 +6,7 @@ const expiration = "2h";
 function authMiddleware(req, res, next) {
     // define the token, so it can come from multiple sources, either the headers, the body, or the query itself
     // need to basically check first if the req.body exists to then get the token and avoid a server crash for the request
-    let token = (req.body && req.body.token) || req.query.token || req.headers.authorization;
+    let token = (req.body && req.body.token) || req.query.token || req.headers.authorization || req.cookies.authToken;
 
     // if the token is in Auth header, remove the bearer prefix
     if (req.headers.authorization) {
@@ -42,4 +42,14 @@ function signToken({ username, email, _id}) {
     return jwt.sign({ data: payload }, secret, { expiresIn: expiration});
 }
 
-module.exports = { authMiddleware, signToken };
+// set the cookie response to the browser with the token for login/signup
+function setAuthCookie(res, token){
+    res.cookie('authToken', token, {
+        // prevents js from accessing the token
+        httpOnly: true,
+        // cookie is only sent on same-site requests
+        sameSite:"strict"
+    });
+}
+
+module.exports = { authMiddleware, signToken, setAuthCookie };

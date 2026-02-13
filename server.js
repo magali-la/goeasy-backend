@@ -2,7 +2,7 @@
 require("dotenv").config();
 const express = require("express");
 const app = express();
-
+const cookieParser = require("cookie-parser");
 // passport dependencies
 const passport = require("passport");
 require("./config/passport.js");
@@ -16,6 +16,9 @@ app.use(express.json());
 
 // initilize pssport
 app.use(passport.initialize());
+
+// parse cookies data
+app.use(cookieParser());
 
 // ROUTES - pass all requests to this central routing hub
 const router = require("./routes/index.js");
