@@ -48,7 +48,7 @@ function setAuthCookie(res, token){
         // prevents js from accessing the token
         httpOnly: true,
         // cookie is only sent on same-site requests
-        sameSite:"strict"
+        sameSite: "strict"
     });
 }
 

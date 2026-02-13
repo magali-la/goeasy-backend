@@ -6,6 +6,8 @@ const cookieParser = require("cookie-parser");
 // passport dependencies
 const passport = require("passport");
 require("./config/passport.js");
+// cors
+const cors = require("cors");
 
 // DATABASE CONNECTION
 const db = require("./config/connection.js");
@@ -19,6 +21,14 @@ app.use(passport.initialize());
 
 // parse cookies data
 app.use(cookieParser());
+
+// cors config - frontend url & allow cookies to be sent cross-origin
+const corsOptions = {
+    origin: process.env.CORS_ORIGIN,
+    credentials: true
+};
+
+app.use(cors(corsOptions));
 
 // ROUTES - pass all requests to this central routing hub
 const router = require("./routes/index.js");
