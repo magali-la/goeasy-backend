@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const passport = require("passport");
-const { signToken } = require('../../utils/auth.js');
+const { signToken, setAuthCookie } = require('../../utils/auth.js');
 
 // Google OAuth routes and callback route
 
@@ -30,14 +30,17 @@ router.get("/callback",
         const userObj = req.user.toObject();
         delete userObj.googleId;
 
-        // respond with the token and the user
-        res.json({ token, user: userObj });
+        // send cookie to browser with token
+        setAuthCookie(res, token);
+
+        // redirect to home in frontend
+        res.redirect(`${process.env.FRONTEND_ORIGIN}/home`);
     }
 );
 
-// TODO: temp failure redirect route which just sends json data instead of redirecting to a frontend login
+// redirect to a frontend login page
 router.get("/failure", (req, res) => {
-    res.status(401).json({ message: "OAuth login failed"});
+    res.status(302).redirect(`${process.env.FRONTEND_ORIGIN}/login`);
 });
 
 module.exports = router;

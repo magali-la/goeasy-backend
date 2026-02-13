@@ -24,7 +24,7 @@ app.use(cookieParser());
 
 // cors config - frontend url & allow cookies to be sent cross-origin
 const corsOptions = {
-    origin: process.env.CORS_ORIGIN,
+    origin: process.env.FRONTEND_ORIGIN,
     credentials: true
 };
 
