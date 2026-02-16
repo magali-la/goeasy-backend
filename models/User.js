@@ -50,6 +50,12 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ["local", "google"],
         default: "local"
+    },
+    // add trips so the user's trips can be populated
+    trips: {
+        type: [mongoose.SchemaTypes.ObjectId],
+        ref: 'Trip',
+        default: [] 
     }
 // set timestamp for createdAt and updatedAt fields for user profile UI
 }, { timestamps: true });
