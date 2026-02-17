@@ -47,6 +47,38 @@ router.get('/:tripId', async (req, res) => {
 });
 
 // DELETE one trip - DELETE /api/trips/:tripId
+router.delete("/:tripId", async (req, res) => {
+	const tripId = req.params.tripId;
+
+    try {
+        const trip = await Trip.findById(tripId);
+
+        // error if no trip
+        if (!trip) {
+          return res.status(404).json({ message: "No trip found with this id" });
+        };
+
+		// check authorization
+		if (!trip.participants.includes(req.user._id)) {
+            return res.status(403).json({ message: "Not authorized to view this trip" });
+        };
+
+        // for loop - need to delete this trip from all the user's who had this trip id in their trips field before deleting it
+        for (let userId of trip.participants) {
+            // mongoose operator to delete something from an array
+            await User.findByIdAndUpdate(
+                userId,
+                { $pull: { trips: tripId } }
+            )
+        };
+
+		await Trip.findByIdAndDelete(tripId);
+
+        res.json({ message: "Trip deleted", deletedTrip: trip });
+    } catch (error) {
+      	res.status(500).json({ message: error.message });
+    }
+}); 
 
 // UPDATE one trip - PUT /api/trips/:tripId
 
