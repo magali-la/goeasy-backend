@@ -81,6 +81,36 @@ router.delete("/:tripId", async (req, res) => {
 }); 
 
 // UPDATE one trip - PUT /api/trips/:tripId
+router.put("/:tripId", async (req, res) => {
+	const tripId = req.params.tripId;
+
+	try {
+		// find the trip first then run authorization
+		const trip = await Trip.findById(tripId);
+		// error if no bookmark found
+		if (!trip) {
+			return res.status(404).json({ message: "No trip found with this id" });
+		}
+
+		// check if they're a participant
+		if (!trip.participants.includes(req.user._id)) {
+            return res.status(403).json({ message: "Not authorized to update this trip" });
+        }
+
+		// object.assign to overwrite anything from the request body that has changed from the original
+		Object.assign(trip, req.body);
+		// then save the trip
+		await trip.save();
+
+        // populate to get full participant data for the frontend
+        await trip.populate("participants");
+
+		// respond with the new trip
+		res.json(trip);
+	} catch (error) {
+      	res.status(500).json({ message: error.message });
+	}
+});
 
 // CREATE one trip - POST /api/trips
 router.post("/", async (req, res) => {
