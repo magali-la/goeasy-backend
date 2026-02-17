@@ -76,9 +76,13 @@ router.get("/me", authMiddleware, async (req, res) => {
     // authMiddleware is going to attach a req.user if the token is valid and then run this route to return the profile
     try {
         // find the user - it will never query with password or google id bc of schema select: false for both fields
-        const user = await User.findById(req.user._id);
+        // this is going to populate data needed
+        const user = await User.findById(req.user._id).populate("trips").populate({
+            path: "activities.activityIds",
+            model: "Activity"
+        });
 
-        // user without pass/googleid
+        // user without pass/googleid - with full objects for things in the schema for trips and activities
         res.json(user);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -129,6 +133,46 @@ router.get("/search", authMiddleware, async (req, res) => {
 
         // return the array of matches the frontend will map on the search results component
         res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ROUTES for budget management for the user
+// CREATE a new budget for a trip - POST /api/users/budgets
+router.post("/budgets", authMiddleware, async (req, res) => {
+    // destructure to get the tripId and amount send by the frontend
+    const { tripId, amount } = req.body;
+
+    try {
+        // get the current user
+        const user = await User.findById(req.user._id);
+
+        // figure out if there is already a budget for the trip in question
+        const existingBudget = user.budgets.find(budget => budget.tripId.toString() === tripId);
+
+        // If there's already a budget set for this tripId, then update it with operators
+        if (existingBudget) {
+            await User.findByIdAndUpdate(
+                req.user._id,
+                { $set: { "budgets.$[elem].amount": amount } },
+                { arrayFilters: [{ "elem.tripId": tripId }] }
+            );
+        } else {
+            // otherwise push the object up from scratch into this array
+            await User.findByIdAndUpdate(
+                req.user._id,
+                { $push: { budgets: { tripId, amount }} }
+            )
+        }
+
+        // update user and populate the key info needed
+        const updatedUser = await User.findById(req.user._id).populate("trips").populate({
+            path: "activities.activityIds",
+            model: "Activity"
+        });
+
+        res.json(updatedUser);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

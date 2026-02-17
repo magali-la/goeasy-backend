@@ -72,7 +72,21 @@ const userSchema = new mongoose.Schema({
             }
         }],
         default: []
-    }    
+    },
+    budgets: {
+        type: [{
+            tripId: {
+                type: mongoose.SchemaTypes.ObjectId,
+                ref: "Trip",
+                required: true
+            },
+            amount: {
+                type: Number,
+                required: true
+            }
+        }],
+        default: []
+    }   
 // set timestamp for createdAt and updatedAt fields for user profile UI
 }, { timestamps: true });
 
