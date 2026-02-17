@@ -226,6 +226,10 @@ router.post("/:tripId/participants", async (req, res) => {
 });
 
 // ROUTES FOR ACTIVITIES - INDUCES
+// DELETE - delete an activity from  trip - DELETE /api/trips/:tripId/activities/:activityId
+router.delete("/:tripId/activities/:activityId", async (req, res) => {
+
+})
 
 // CREATE - add an activity to a trip - POST /api/trips/:tripId/activities
 router.post("/:tripId/activities", async (req, res) =>{
@@ -296,6 +300,104 @@ router.post("/:tripId/activities", async (req, res) =>{
         
         // return the trip - don't need to populate in the response - frontend will refresh the get trip by id route which should populate everything to store in state
         res.json(trip);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Routes to add or remove participants from the activity and update the users' documents
+// DELETE - remove a participant from an activity - DELETE /api/trips/:tripId/activities/:activityId/participants/:userId
+router.delete("/:tripId/activities/:activityId/participants/:userId", async (req, res) => {
+    // destructure from the params the trip and activity id in question
+    const { tripId, activityId, userId } = req.params;
+
+    try {
+        // get the trip
+        let trip = await Trip.findById(tripId);
+        
+        // authorization check
+        if (!trip.participants.includes(req.user._id)) {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+
+        // update the trip and the user with the user, so pull/remove from the nested particiants array where element is whichever tripID matches
+        await Trip.findByIdAndUpdate(
+            tripId,
+            { $pull: { "activities.$[elem].participants": userId } },
+            { arrayFilters: [{ "elem.activityId": activityId }] }
+        );
+
+        // define the user
+        const user = await User.findById(userId);
+
+        // remove it equally from the removed user's activities section of their document
+        await User.findByIdAndUpdate(
+            userId,
+            { $pull: { "activities.$[elem].activityIds": activityId }},
+            { arrayFilters: [{ "elem.tripId": tripId }]}
+        )
+
+        const updatedUser = await User.findById(userId);
+    
+        // just send a message, the frontend will call the get route on thr trip to update it right after
+        res.json({ user: updatedUser, message: "Participant removed from this activity" })
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// CREATE - add a new participnt to the activity - POST /api/trips/:tripId/activities/:activityId/participants
+// the option in the frontend will be to check or uncheck from the list of participants, an edit button to edit the participants on the activity, that's the only thing they can 
+router.post("/:tripId/activities/:activityId/participants", async (req, res) => {
+    // destructure from the params the trip and activity id in question
+    const { tripId, activityId } = req.params;
+    // destructure the id of the person who will be added
+    const { userId } = req.body;
+
+    try {
+        // get the trip
+        let trip = await Trip.findById(tripId);
+        
+        // authorization check
+        if (!trip.participants.includes(req.user._id)) {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+
+        // update the trip and the user with the user, so push into the nested particiants array where element is whichever tripID matches
+        await Trip.findByIdAndUpdate(
+            tripId,
+            { $push: { "activities.$[elem].participants": userId } },
+            { arrayFilters: [{ "elem.activityId": activityId }] }
+        );
+
+        // define the user
+        const user = await User.findById(userId);
+        console.log("before", user.activities)
+
+        let userTripActivity = user.activities.find(activityObj => activityObj.tripId.toString() === tripId)
+        
+        // if there isn't a match - then go to user's document and add the fields to create an object for the thing doesn't exist in the user.activities array
+        if (!userTripActivity) {
+            await User.findByIdAndUpdate(
+                userId,
+                { $push: { activities: { 
+                    tripId: tripId, 
+                    activityIds: [activityId] 
+                }}}
+            );
+        } else {
+            // add it equally to the user's activities section of their document if it does alredy exist (meaning they are on another activity in this trip)
+            await User.findByIdAndUpdate(
+                userId,
+                { $push: { "activities.$[elem].activityIds": activityId }},
+                { arrayFilters: [{ "elem.tripId": tripId }]}
+            )
+        };
+        const updatedUser = await User.findById(userId);
+        console.log("After", updatedUser.activities);
+        
+        // just send a message, the frontend will call the get route on thr trip to update it right after
+        res.json({ user: updatedUser, message: "Participant added to this activity" })
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
