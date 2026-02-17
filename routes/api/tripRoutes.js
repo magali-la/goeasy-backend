@@ -136,8 +136,90 @@ router.post("/", async (req, res) => {
 
 // ROUTES FOR PARTICIPANTS - INDUCES
 // DELETE a trip participant - DELETE /api/trips/:tripId/participants/:userId
+router.delete("/:tripId/participants/:userId", async (req, res) => {
+    // get the trip and user injected by frntend from the params
+    const tripId = req.params.tripId;
+    const userId = req.params.userId;
+
+    try {
+        // get the trip
+        let trip = await Trip.findById(tripId);
+
+        // if the trip doesn't exist
+        if (!trip) {
+			return res.status(404).json({ message: "No trip found with this id" });
+		}
+
+        // are they authorized to do this
+        if (!trip.participants.includes(req.user._id)) {
+            return res.status(403).json({ message: "Not authorized to delete participants from this trip" });
+        }
+
+        // delete the user from the trip's participants array - use operator to delete it from array
+        trip = await Trip.findByIdAndUpdate(
+            tripId,
+            { $pull: { participants: userId }},
+            // use this so that moongoose returns the updated trip instead of the old one since mongoose will default to returning the doc before the update
+            { new: true }
+        );
+
+        // find that user and delete it from their document's trips array
+        await User.findByIdAndUpdate(
+            userId,
+            { $pull: { trips: tripId } }
+        );
+
+        // populate the trip with the participants full data
+        await trip.populate("participants");
+
+        res.json(trip);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
 
 // CREATE add a trip participant - POST /api/trips/:tripId/participants
+router.post("/:tripId/participants", async (req, res) => {
+    const tripId = req.params.tripId;
+    // get the userId sent from the frontend
+    const userId = req.body.userId
 
+    try {
+        // find the trip in question
+        const trip = await Trip.findById(tripId);
+
+        // if the trip doesn't exist
+        if (!trip) {
+			return res.status(404).json({ message: "No trip found with this id" });
+		}
+
+        // are they authorized to do this
+        if (!trip.participants.includes(req.user._id)) {
+            return res.status(403).json({ message: "Not authorized to add participants to this trip" });
+        }
+
+        // check if the user they want to add is already in the trip
+        if (trip.participants.includes(userId)) {
+            return res.status(400).json({ message: "User is already a participant" });
+        }
+
+        // then add them to the participants field in the trip and save the updates
+        trip.participants.push(userId);
+        await trip.save();
+
+        // now add the trip to the new user's trips array - push into that array
+        await User.findByIdAndUpdate(
+            userId,
+            { $push: { trips: tripId } }
+        );
+
+        // now return the trip and populate the full participants data
+        await trip.populate("participants");
+
+        res.json(trip);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
 
 module.exports = router;
