@@ -109,4 +109,29 @@ router.delete("/me", authMiddleware, async (req, res) => {
     }
 });
 
+// ROUTES for user search for adding trip participants
+// INDEX to find a user - GET /api/users/search
+// frontend is going to have a query called username that will look like this : search?username=${searchTerm} so pull the query param to find the user by their id (this is needed so it can actually add the participant to the trip by their id in the backend)
+router.get("/search", authMiddleware, async (req, res) => {
+    try {
+        // set the serchInput from the query param, which should be the username they're looking for
+        const searchInput = req.query.username;
+
+        // frontend will also have protections to stop user from making an empty search
+        if (!searchInput) {
+            return res.status(400).json({ message: "Username required" })
+        }
+
+        // find a match for anything that includes the search term and case insensitive option - it returns an array the frontend maps to show the results
+        const users = await User.find({
+            username: { $regex: searchInput, $options: "i" }
+        });
+
+        // return the array of matches the frontend will map on the search results component
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;
