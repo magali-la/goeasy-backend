@@ -37,8 +37,11 @@ router.get('/:tripId', async (req, res) => {
             return res.status(403).json({ message: "Not authorized to view this trip" });
         }
 
-        // then populate to get the full participant objects with full data for the frontend in the response TODO: activities populate
-        await trip.populate("participants");
+        // then populate to get the full participant objects and activitites object with full data for the frontend in the response
+        await trip.populate("participants")
+        await trip.populate({
+            path: "activities.activityId"
+        });
 
         res.json(trip);
     } catch (error) {
@@ -216,6 +219,82 @@ router.post("/:tripId/participants", async (req, res) => {
         // now return the trip and populate the full participants data
         await trip.populate("participants");
 
+        res.json(trip);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ROUTES FOR ACTIVITIES - INDUCES
+
+// CREATE - add an activity to a trip - POST /api/trips/:tripId/activities
+router.post("/:tripId/activities", async (req, res) =>{
+    const tripId = req.params.tripId;
+    // add the activity id and the array of participants for this activitythat's being passed from the frontend
+    const {activityId, participants} = req.body;
+
+    // stop the route if the participants weren't sent from the frontend - needs this array to make sure the activity gets added to each user's document from the participants
+    if (!participants || participants.length === 0) {
+        return res.status(400).json({ message: "Participants array required"})
+    }
+
+    try {
+        // get the trip in question
+        const trip = await Trip.findById(tripId);
+
+        if (!trip) {
+			return res.status(404).json({ message: "No trip found with this id" });
+		}
+
+        // are they authorized to do this?
+        if (!trip.participants.includes(req.user._id)) {
+            return res.status(403).json({ message: "Not authorized to add activities to this trip" });
+        }
+
+        // check if this activityId being requested to be added is already in this activities - check the activityId nested field against the activityId in the req.body
+        const alreadyAdded = trip.activities.find(activity => activity.activityId.toString() === activityId);
+
+        if (alreadyAdded) {
+            return res.status(400).json({ message: "Activity already added" });
+        };
+        
+        // add with the participants of the req.body, or if it's not included, then the trip.participants array by default
+        trip.activities.push({
+            activityId: activityId,
+            participants: participants || trip.participants
+        });
+
+        // save it since directly manipulating the trip to push the object
+        await trip.save();
+
+        // for loop through each of the users in trip.participants - add the activity to each user's document
+        for (let userId of participants) {
+            // get the user, go to the activities array
+            const user = await User.findById(userId);
+
+            // go to user.activities array of objects. check in each object if there tripId key's value is the same as the tripId of the trip they have dded it to
+            let userTripActivity = user.activities.find(activityObj => activityObj.tripId.toString() === tripId)
+        
+            // if there isn't a match - then go to user's document and add the fields in an object if it doesn't exist in the user.activities array
+            if (!userTripActivity) {
+                await User.findByIdAndUpdate(
+                    userId,
+                    { $push: { activities: { 
+                        tripId: tripId, 
+                        activityIds: [activityId] 
+                    }}}
+                );
+            } else {
+                // Add to existing activityIds array - the elem is a placeholder which tells it to specifically add to the element (the object) of the user.activities array which  matches the arrayFilters. the element where the tripId = the tripId in question
+                await User.findByIdAndUpdate(
+                    userId,
+                    { $push: { "activities.$[elem].activityIds": activityId } },
+                    { arrayFilters: [{ "elem.tripId": tripId }] }
+                );
+            }
+        }
+        
+        // return the trip - don't need to populate in the response - frontend will refresh the get trip by id route which should populate everything to store in state
         res.json(trip);
     } catch (error) {
         res.status(500).json({ message: error.message });

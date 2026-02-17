@@ -56,7 +56,23 @@ const userSchema = new mongoose.Schema({
         type: [mongoose.SchemaTypes.ObjectId],
         ref: 'Trip',
         default: [] 
-    }
+    },
+    // add activities to help manage the budget - an object with the trip id and the list of activity ids
+    activities: { 
+        type: [{
+            tripId: {
+                type: mongoose.SchemaTypes.ObjectId,
+                ref: "Trip",
+                required: true
+            },
+            activityIds: {
+                type: [mongoose.SchemaTypes.ObjectId],
+                ref: "Activity",
+                default: []
+            }
+        }],
+        default: []
+    }    
 // set timestamp for createdAt and updatedAt fields for user profile UI
 }, { timestamps: true });
 

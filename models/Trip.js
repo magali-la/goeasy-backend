@@ -41,17 +41,20 @@ const tripSchema = new mongoose.Schema ({
         default: []
     },
     // reference activities so that the full activity object can be populated in the route to display the details
-    activities: [{
-        activityId: {
-            type: mongoose.SchemaTypes.ObjectId,
-            ref: "Activity"
-        },
-        participants: {
-            type: [mongoose.SchemaTypes.ObjectId],
-            ref: "User",
-            default: []
-        }
-    }]
+    activities: { 
+        type: [{
+            activityId: {
+                type: mongoose.SchemaTypes.ObjectId,
+                ref: "Activity"
+            },
+            participants: {
+                type: [mongoose.SchemaTypes.ObjectId],
+                ref: "User",
+                default: []
+            }
+        }],
+        default: []
+    }
 }, { timestamps: true });
 
 const Trip = mongoose.model('Trip', tripSchema);
