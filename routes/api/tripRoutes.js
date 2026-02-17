@@ -8,8 +8,43 @@ router.use(authMiddleware);
 
 // ROUTES FOR TRIPS - INDUCES
 // INDEX all trips - GET /api/trips
+router.get("/", async (req, res) => {
+    try {
+        // the user's trips are in the user schema as an array of trip Ids, use this with populate to get the actual trip objects for the frontend preview card
+        const user = await User.findById(req.user._id).populate("trips");
 
-// INDEX one trip - GET /api/trips/:tripId
+        // respond with their trips -> the array with trip objects
+        res.json(user.trips);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// SHOW one trip - GET /api/trips/:tripId
+router.get('/:tripId', async (req, res) => {
+    const tripId = req.params.tripId;
+
+    try {
+        // get the trip
+        const trip = await Trip.findById(tripId);
+
+        if (!trip) {
+            return res.status(404).json({ message: "No trip found with this id" });
+        }
+
+        // Check for authorization to view the trip if they're a participant
+        if (!trip.participants.includes(req.user._id)) {
+            return res.status(403).json({ message: "Not authorized to view this trip" });
+        }
+
+        // then populate to get the full participant objects with full data for the frontend in the response TODO: activities populate
+        await trip.populate("participants");
+
+        res.json(trip);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
 
 // DELETE one trip - DELETE /api/trips/:tripId
 
