@@ -228,7 +228,34 @@ router.post("/:tripId/participants", async (req, res) => {
 // ROUTES FOR ACTIVITIES - INDUCES
 // DELETE - delete an activity from  trip - DELETE /api/trips/:tripId/activities/:activityId
 router.delete("/:tripId/activities/:activityId", async (req, res) => {
+    const { tripId, activityId } = req.params;
 
+    try {
+        const trip = await Trip.findById(tripId);
+        if (!trip) return res.status(404).json({ message: "No trip found with this id" });
+
+        if (!trip.participants.includes(req.user._id)) {
+        return res.status(403).json({ message: "Not authorized to delete activities from this trip" });
+        }
+
+        // remove the activity from the trip
+        const updatedTrip = await Trip.findByIdAndUpdate(
+            tripId,
+            { $pull: { activities: { activityId } } },
+            { new: true }
+        );
+
+        // remove activityId from the user's activity
+        await User.findByIdAndUpdate(
+            req.user._id,
+            { $pull: { "activities.$[elem].activityIds": activityId } },
+            { arrayFilters: [{ "elem.tripId": tripId }] }
+        );
+
+        res.json({ message: "Activity removed from trip", trip: updatedTrip });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 })
 
 // CREATE - add an activity to a trip - POST /api/trips/:tripId/activities
