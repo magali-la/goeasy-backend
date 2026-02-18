@@ -71,6 +71,17 @@ router.post("/login", async (req, res) => {
     }
 });
 
+// LOGOUT - clear cookies - POST /api/users/logout
+// use the same settings as setAuthCookie
+router.post("/logout", (req, res) => {
+    res.clearCookie("authToken", {
+        httpOnly: true,
+        sameSite: "strict"
+    });
+
+  res.status(200).json({ message: "Logged out successfully" });
+});
+
 // INDEX - get profile - GET /api/users/me
 router.get("/me", authMiddleware, async (req, res) => {
     // authMiddleware is going to attach a req.user if the token is valid and then run this route to return the profile
