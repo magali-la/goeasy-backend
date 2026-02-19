@@ -72,11 +72,13 @@ router.post("/login", async (req, res) => {
 });
 
 // LOGOUT - clear cookies - POST /api/users/logout
-// use the same settings as setAuthCookie
+// use the same settings as setAuthCookie - updated for production
 router.post("/logout", (req, res) => {
     res.clearCookie("authToken", {
         httpOnly: true,
-        sameSite: "strict"
+        sameSite: "none",
+        secure: true,
+        path: "/"
     });
 
   res.status(200).json({ message: "Logged out successfully" });

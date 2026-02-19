@@ -47,8 +47,11 @@ function setAuthCookie(res, token){
     res.cookie('authToken', token, {
         // prevents js from accessing the token
         httpOnly: true,
-        // cookie is only sent on same-site requests
-        sameSite: "strict"
+        // set to none bc in production it needs to be enabled cross-site from the two different domains - add secure:true will send cookies over HTTPS
+        sameSite: "none",
+        secure: true,
+        // this ensures tht the cookie is available to all backend routes - so it won't get stuck on login or signup where the cookie first is sent
+        path: "/"
     });
 }
 
