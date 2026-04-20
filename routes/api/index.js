@@ -13,4 +13,9 @@ router.use("/trips", tripRoutes);
 // Activity Routes prefis /api/activities
 router.use("/activities", activityRoutes)
 
+// Route to ping render up after inactivity /api/awaken
+router.get("/awaken", (req, res) => {
+    res.status(200).json({ message: "Render is warming up"});
+});
+
 module.exports = router;
